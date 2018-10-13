@@ -9,6 +9,44 @@
 #echo $(discover_message) > /dev/udp/239.255.255.250/1982
 #And then catch the mono cast response.
 
+##---------------------------------
+# 	Main light loop function
+##---------------------------------
+main_light_loop() {
+	echo "Loop lap 0"
+	RGB_COUNTER=0
+	let INT_STEP=80/$RGB_STEPS
+	let INT=$STARTING_INTENSITY+$INT_STEP
+
+         while [ $RGB_COUNTER -lt $RGB_STEPS ]; do
+		let COLOR_R=${RGB_START[0]}+${RGB_STEP[0]}*RGB_COUNTER
+		let COLOR_G=${RGB_START[1]}+${RGB_STEP[1]}*RGB_COUNTER
+		let COLOR_B=${RGB_START[2]}+${RGB_STEP[2]}*RGB_COUNTER
+		let COLOR=$COLOR_R*65536+$COLOR_G*256+$COLOR_B
+
+             	RET_VAL=$(echo -ne '{"id":1,"method":"set_rgb","params":['$COLOR',"smooth",2000]}\r\n' | nc -w1 192.168.1.150 55443)
+		echo "Loop lap: $RGB_COUNTER"
+		sleep 4
+              	let RGB_COUNTER=RGB_COUNTER+1
+
+		# Increase intensity also, do this stepwise.
+                while true; do
+			RET_VAL=$(echo -ne '{"id":1,"method":"set_bright","params":['$INT',"smooth",'$INT_INC_TIME']}\r\n' | nc -w1 192.168.1.150 55443)
+	                if ( echo "$RET_VAL" | grep -q "bright" )
+	                then 
+	                	let INT=$INT+$INT_STEP
+	                        break
+	                else
+	                	echo "Failed to set intensity:$RET_VAL"
+	               	fi
+	               	sleep 1
+	     	done
+             	sleep 2
+	done
+}
+
+
+
 # Remove previous log file
 rm ~/Desktop/log.txt
 
@@ -156,43 +194,15 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
                         sleep 1
 		done
 
-
-
-		##---------------------------------
-		# 	Main light loop
-		##---------------------------------
-		RGB_COUNTER=0
-		let INT_STEP=80/$RGB_STEPS
-		let INT=$STARTING_INTENSITY+$INT_STEP
-
-                while [ $RGB_COUNTER -lt $RGB_STEPS ]; do
-                       	let COLOR_R=${RGB_START[0]}+${RGB_STEP[0]}*RGB_COUNTER
-			let COLOR_G=${RGB_START[1]}+${RGB_STEP[1]}*RGB_COUNTER
-			let COLOR_B=${RGB_START[2]}+${RGB_STEP[2]}*RGB_COUNTER
-			let COLOR=$COLOR_R*65536+$COLOR_G*256+$COLOR_B
-
-                       	RET_VAL=$(echo -ne '{"id":1,"method":"set_rgb","params":['$COLOR',"smooth",2000]}\r\n' | nc -w1 192.168.1.150 55443)
-			sleep 4
-                       	let RGB_COUNTER=RGB_COUNTER+1
-
-			# Increase intensity also, do this stepwise.
-	                while true; do
-	                        RET_VAL=$(echo -ne '{"id":1,"method":"set_bright","params":['$INT',"smooth",'$INT_INC_TIME']}\r\n' | nc -w1 192.168.1.150 55443)
-	                        if ( echo "$RET_VAL" | grep -q "bright" )
-	                        then 
-	                                #echo "Set intensity: $RET_VAL"
-					let INT=$INT+$INT_STEP
-	                                break
-	                        else
-	                                echo "Failed to set intensity:$RET_VAL"
-	                        fi
-	                        sleep 1
-	                done
-
-                       	sleep 3
-                done
+		# Start the main light loop and kill it at zenity input or timeout
+		main_light_loop &
+		PID_MLL=$!
 
                 zenity --timeout 900 --info --width 200 --height 200 --text "Alarm sounding for 15 minutes. Press ok to stop."
+
+		echo "Killing $PID_MLL"
+		echo "Killing $PID_MLL" >> ~/Desktop/log.txt
+		kill $PID_MLL
 
                 #Turn of bulb slowly after at most 15 minutes.
                 echo -ne '{"id":1,"method":"set_power","params":["off","smooth",5000]}\r\n' | nc -w1 192.168.1.150 55443
@@ -208,4 +218,6 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
 done
 
 echo "Alarm loop failed at: " $(eval "date +\"%T\"") >> ~/Desktop/log.txt
+
+
 
