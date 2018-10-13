@@ -9,6 +9,28 @@
 #echo $(discover_message) > /dev/udp/239.255.255.250/1982
 #And then catch the mono cast response.
 
+DATE=$(eval "date +\"%T\"")
+RET_VAL=""
+W_TIME_START="07:00"
+W_TIME_END="07:30"
+Z_ALARM_HOUR="00"
+Z_ALARM_MIN="00"
+
+# Color control values
+RGB_STEPS=8
+COLOR_CHANGE_TIME_MS=10000
+COLOR_CHANGE_TIME_S=10
+# Can take up to 10 steps with these settnngs but light is too white in the end.
+RGB_START=(215 55 5)
+RGB_STEP=(3 13 7)
+
+# Intensity control values
+STARTING_INTENSITY=1
+#8 loop laps, should take ~10 minutes (560s) -> 70s per loop.
+INT_INC_TIME_MS=70000
+INT_INC_TIME_S=70
+
+
 ##---------------------------------
 # 	Main light loop function
 ##---------------------------------
@@ -24,14 +46,14 @@ main_light_loop() {
 		let COLOR_B=${RGB_START[2]}+${RGB_STEP[2]}*RGB_COUNTER
 		let COLOR=$COLOR_R*65536+$COLOR_G*256+$COLOR_B
 
-             	RET_VAL=$(echo -ne '{"id":1,"method":"set_rgb","params":['$COLOR',"smooth",2000]}\r\n' | nc -w1 192.168.1.150 55443)
+		RET_VAL=$(echo -ne '{"id":1,"method":"set_rgb","params":['$COLOR',"smooth",'$COLOR_CHANGE_TIME_MS']}\r\n' | nc -w1 192.168.1.150 55443)
 		echo "Loop lap: $RGB_COUNTER"
-		sleep 4
+		sleep $COLOR_CHANGE_TIME_S
               	let RGB_COUNTER=RGB_COUNTER+1
 
 		# Increase intensity also, do this stepwise.
                 while true; do
-			RET_VAL=$(echo -ne '{"id":1,"method":"set_bright","params":['$INT',"smooth",'$INT_INC_TIME']}\r\n' | nc -w1 192.168.1.150 55443)
+			RET_VAL=$(echo -ne '{"id":1,"method":"set_bright","params":['$INT',"smooth",'$INT_INC_TIME_MS']}\r\n' | nc -w1 192.168.1.150 55443)
 	                if ( echo "$RET_VAL" | grep -q "bright" )
 	                then 
 	                	let INT=$INT+$INT_STEP
@@ -39,41 +61,21 @@ main_light_loop() {
 	                else
 	                	echo "Failed to set intensity:$RET_VAL"
 	               	fi
-	               	sleep 1
+	               	sleep $INT_INC_TIME_S
 	     	done
              	sleep 2
 	done
 }
 
 
+##---------------------------------
+# 	Start of program
+##---------------------------------
 
 # Remove previous log file
 rm ~/Desktop/log.txt
 
 echo "Starting up Johan Yeelight clock script, /etc/init.d/mystartup.sh" > ~/Desktop/log.txt
-
-DATE=$(eval "date +\"%T\"")
-RET_VAL=""
-W_TIME_START="07:00"
-W_TIME_END="07:30"
-Z_ALARM_HOUR="00"
-Z_ALARM_MIN="00"
-
-# Color control values
-RGB_STEPS=8
-# Can take up to 10 steps with these settnngs but light is too white in the end.
-RGB_START=(215 55 5)
-RGB_STEP=(3 13 7)
-
-# Intensity control values
-STARTING_INTENSITY=1
-INT_INC_TIME=3000
-
-
-
-##---------------------------------
-# 	Start of program
-##---------------------------------
 
 # Set up alarm time
 Z_ALARM_HOUR=$(zenity --list --radiolist --width=70 --height=400 --text \
