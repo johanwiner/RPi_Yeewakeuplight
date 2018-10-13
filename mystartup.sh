@@ -21,6 +21,32 @@ W_TIME_END="07:30"
 Z_ALARM_HOUR="00"
 Z_ALARM_MIN="00"
 
+RGB_CURVE_SIZE=18
+RGB_CURVE=(245 24 5\
+	252 38 11 \
+	245 62 9 \
+	242 88 13 \
+	243 124 2\
+	239 141 11)
+
+RGB_STEPS=10
+RGB_START=(18 28 33)
+#RGB_DIFF=(220 202 70)
+RGB_STEP=(22 20 7)
+#RGB_END=(238 230 103)
+
+
+#RGB_CURVE_SIZE=27
+#RGB_CURVE=(255 187 123\
+#	255 190 127 \
+#	255 198 144 \
+#	255 215 174 \
+#	255 235 209 \
+#	255 241 223 \
+#	255 244 232 \
+#	255 245 236 \
+#	255 249 249)
+
 #Ask for input ugin zenity
 Z_ALARM_HOUR=$(zenity --list --radiolist --width=70 --height=500 --text \
 	"<b>Please</b> select time for alarm (hours):" \
@@ -90,12 +116,9 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
 	if [ $(date +%H) = $Z_ALARM_HOUR ] && [ $(date +%M) = $Z_ALARM_MIN ]
 	then 
 		echo "Alarm got off at: " $(eval "date +\"%T\"") >> ~/Desktop/log.txt
-                zenity --timeout 5 --info --text "Alarm is sounding in 5s"
+                #zenity --timeout 5 --info --text "Alarm is sounding in 5s"
 
-		# Ramping up bulb over 2 minutes
-		#COMP_VAL='{"id":1, "result":["ok"]}'
-
-
+		# Ramping up bulb
 		while true; do
 			#Await the correct return value of OK: '{"method":"props","params":{"power":"on"}}'
 			if ( echo "$RET_VAL" | grep -q "on" )
@@ -105,20 +128,49 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
 			else
 				echo "no, RET_VAL=$RET_VAL"
 			fi
+
 			echo "RET_VAL=$RET_VAL" >> ~/Desktop/log.txt
-			echo "RET_VAL=$RET_VAL" 
+			echo "RET_VAL=$RET_VAL"
 			RET_VAL=$(echo -ne '{"id":1,"method":"set_power","params":["on","smooth",120000]}\r\n' | nc -w1 192.168.1.150 55443)
-			sleep 5
+			sleep 3
                 done
 
-		#i=0
-		#while [i -lt 3]; do
-		#	echo "$RET_VAL" >> ~/Desktop/log.txt
-       	      	#	RET_VAL=$(echo -ne '{"id":1,"method":"set_power","params":["on","smooth",120000]}\r\n' | nc -w1 192.168.1.150 55443)
-		#	sleep 2;
+		zenity --timeout 5 --info --text "Light starting up at red"
+		#Change color to red over 3 seconds
+                RET_VAL=$(echo -ne '{"id":1,"method":"set_rgb","params":[11737915,"sudden",0]}\r\n' | nc -w1 192.168.1.150 55443)
+                echo "RET_VAL=$RET_VAL"
+
+		#Loop over RGB_CURVE
+		#RGB_COUNTER=0
+		#while [ $RGB_COUNTER -lt $RGB_CURVE_SIZE ]; do
+		#	let COLOR=${RGB_CURVE[$RGB_COUNTER]}*65536+${RGB_CURVE[$RGB_COUNTER+1]}*256+${RGB_CURVE[$RGB_COUNTER+2]}
+		#	RET_VAL=$(echo -ne '{"id":1,"method":"set_rgb","params":['$COLOR',"sudden",0]}\r\n' | nc -w1 192.168.1.150 55443)
+	        #       echo "RET_VAL=$RET_VAL"
+		#	echo "RGB=$COLOR"
+		#	echo "Counter=$RGB_COUNTER"
+		#	let RGB_COUNTER=RGB_COUNTER+3
+		#	sleep 3
 		#done
 
-		zenity --timeout 900 --info --text "Alarm sounding press ok within 15minutes to turn off light"
+		#RGB_START=(18 28 33)
+		#RGB_STEP=(22 20 7)
+		RGB_COUNTER=0
+                while [ $RGB_COUNTER -lt $RGB_STEPS ]; do
+                       	let COLOR_R=${RGB_START[0]}+${RGB_STEP[0]}*RGB_COUNTER
+			let COLOR_G=${RGB_START[1]}+${RGB_STEP[1]}*RGB_COUNTER
+			let COLOR_B=${RGB_START[2]}+${RGB_STEP[2]}*RGB_COUNTER
+			let COLOR=$COLOR_R*65536+$COLOR_G*256+$COLOR_B
+
+                       	RET_VAL=$(echo -ne '{"id":1,"method":"set_rgb","params":['$COLOR',"sudden",0]}\r\n' | nc -w1 192.168.1.150 55443)
+                       	echo "RET_VAL=$RET_VAL"
+                       	echo "RGB=$COLOR"
+                       	echo "Counter=$RGB_COUNTER"
+                       	let RGB_COUNTER=RGB_COUNTER+1
+                       	sleep 3
+                done
+
+                zenity --timeout 900 --info --text "Alarm sounding for 15 minutes. Press ok to stop."
+
                 #Turn of bulb slowly after at most 15 minutes.
                 echo -ne '{"id":1,"method":"set_power","params":["off","smooth",5000]}\r\n' | nc -w1 192.168.1.150 55443
 
