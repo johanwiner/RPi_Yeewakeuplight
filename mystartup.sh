@@ -16,17 +16,25 @@ W_TIME_END="07:30"
 Z_ALARM_HOUR="00"
 Z_ALARM_MIN="00"
 
-# Color control values
+#
+## Color control values
+#
 RGB_STEPS=8
 COLOR_CHANGE_TIME_MS=10000
 COLOR_CHANGE_TIME_S=10
 # Can take up to 10 steps with these settnngs but light is too white in the end.
+
+# Define starting color
 RGB_START=(215 55 5)
+# Define color increase
 RGB_STEP=(3 13 7)
 
-# Intensity control values
+#
+## Intensity control values
+#
 STARTING_INTENSITY=1
-#8 loop laps, should take ~10 minutes (560s) -> 70s per loop.
+
+#8 loop laps, should take ~9 minutes (560s) -> 70s per loop.
 INT_INC_TIME_MS=70000
 INT_INC_TIME_S=70
 
@@ -77,67 +85,77 @@ rm ~/Desktop/log.txt
 
 echo "Starting up Johan Yeelight clock script, /etc/init.d/mystartup.sh" > ~/Desktop/log.txt
 
-# Set up alarm time
-Z_ALARM_HOUR=$(zenity --list --radiolist --width=70 --height=400 --text \
-	"Select time for alarm (hours):" \
-        --hide-header --column "Select" --column "Hour" \
-	TRUE "$(date +%H)" \
-	FALSE "05" \
-        FALSE "06" \
-        FALSE "07" \
-        FALSE "08" \
-        FALSE "09" \
-        FALSE "10" \
-        FALSE "11" \
-        FALSE "12" \
-        FALSE "13" \
-        FALSE "14" \
-        FALSE "15" \
-        FALSE "16" \
-        FALSE "17" \
-        FALSE "18" \
-        FALSE "19" \
-        FALSE "20" \
-        FALSE "21" \
-        FALSE "22" \
-        FALSE "23" \
-	FALSE "00" \
-	FALSE "01" \
-	FALSE "02" \
-	FALSE "03" \
-	FALSE "04")
-
-if  [ "$Z_ALARM_HOUR" != "" ]
+# If day not Firday or Saturday skip all settings and set alarm to 05:45.
+if  [ "$(date +%A)" != "fredag" && "$(date +%A)" != "lördag"  && "$(date +%H)" -lh "21" ]
 then
-	Z_ALARM_MIN=$(zenity --list --radiolist --width=70 --height=400 --text \
-        "Select time for alarm (minutes):" \
-        --hide-header --column "Select" --column "Minutes" \
-	TRUE "$(date +%M)" \
-	FALSE "00" \
-	FALSE "05" \
-        FALSE "10" \
-	FALSE "15" \
-	FALSE "20" \
-        FALSE "25" \
-	FALSE "30" \
-	FALSE "35" \
-	FALSE "40" \
-	FALSE "45" \
-	FALSE "50" \
-	FALSE "55" \
-	)
+	Z_ALARM_HOUR="05"
+	Z_ALARM_MIN="45"
+        echo "Alarm set to: $W_TIME_START_2" >> ~/Desktop/log.txt
+        zenity  --timeout 60 --info --text "Alarm automatically set to $Z_ALARM_HOUR:$Z_ALARM_MIN since time now is before 21:00."
+else
 
-	if [ "$Z_ALARM_MIN" != "" ]
+	# Set up alarm time
+	Z_ALARM_HOUR=$(zenity --list --radiolist --width=70 --height=100 --text \
+		"Select time for alarm (hours):" \
+	        --hide-header --column "Select" --column "Hour" \
+		TRUE "$(date +%H)" \
+		FALSE "05" \
+	        FALSE "06" \
+	        FALSE "07" \
+	        FALSE "08" \
+	        FALSE "09" \
+	        FALSE "10" \
+	        FALSE "11" \
+	        FALSE "12" \
+	        FALSE "13" \
+	        FALSE "14" \
+	        FALSE "15" \
+	        FALSE "16" \
+	        FALSE "17" \
+	        FALSE "18" \
+	        FALSE "19" \
+	        FALSE "20" \
+	        FALSE "21" \
+	        FALSE "22" \
+	        FALSE "23" \
+		FALSE "00" \
+		FALSE "01" \
+		FALSE "02" \
+		FALSE "03" \
+		FALSE "04")
+
+	if  [ "$Z_ALARM_HOUR" != "" ]
 	then
-		zenity --info --text "Alarm set to $Z_ALARM_HOUR:$Z_ALARM_MIN."
-		W_TIME_START_2=$Z_ALARM_HOUR:$Z_ALARM_MIN
-		echo "Alarm set to: $W_TIME_START_2" >> ~/Desktop/log.txt
+		Z_ALARM_MIN=$(zenity --list --radiolist --width=70 --height=100 --text \
+	        "Select time for alarm (minutes):" \
+	        --hide-header --column "Select" --column "Minutes" \
+		TRUE "$(date +%M)" \
+		FALSE "00" \
+		FALSE "05" \
+	        FALSE "10" \
+		FALSE "15" \
+		FALSE "20" \
+	        FALSE "25" \
+		FALSE "30" \
+		FALSE "35" \
+		FALSE "40" \
+		FALSE "45" \
+		FALSE "50" \
+		FALSE "55" \
+		)
+
+		if [ "$Z_ALARM_MIN" != "" ]
+		then
+			zenity --info --text "Alarm set to $Z_ALARM_HOUR:$Z_ALARM_MIN."
+			W_TIME_START_2=$Z_ALARM_HOUR:$Z_ALARM_MIN
+			echo "Alarm set to: $W_TIME_START_2" >> ~/Desktop/log.txt
+		else 
+			zenity --info --text "Alarm not set. Exiting"
+		fi
 	else 
 		zenity --info --text "Alarm not set. Exiting"
 	fi
-else 
-	zenity --info --text "Alarm not set. Exiting"
-fi
+fi #End of weekday -> Alarm time  = 05:45
 
 
 
