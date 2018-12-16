@@ -39,6 +39,9 @@ INT_INC_TIME_MS=70000
 INT_INC_TIME_S=70
 
 
+#IP settings
+IP_RPi=192.168.1.79
+
 ##---------------------------------
 # 	Main light loop function
 ##---------------------------------
@@ -54,14 +57,14 @@ main_light_loop() {
 		let COLOR_B=${RGB_START[2]}+${RGB_STEP[2]}*RGB_COUNTER
 		let COLOR=$COLOR_R*65536+$COLOR_G*256+$COLOR_B
 
-		RET_VAL=$(echo -ne '{"id":1,"method":"set_rgb","params":['$COLOR',"smooth",'$COLOR_CHANGE_TIME_MS']}\r\n' | nc -w1 192.168.1.150 55443)
+		RET_VAL=$(echo -ne '{"id":1,"method":"set_rgb","params":['$COLOR',"smooth",'$COLOR_CHANGE_TIME_MS']}\r\n' | nc -w1 $IP_RPi 55443)
 		echo "Loop lap: $RGB_COUNTER"
 		sleep $COLOR_CHANGE_TIME_S
               	let RGB_COUNTER=RGB_COUNTER+1
 
 		# Increase intensity also, do this stepwise.
                 while true; do
-			RET_VAL=$(echo -ne '{"id":1,"method":"set_bright","params":['$INT',"smooth",'$INT_INC_TIME_MS']}\r\n' | nc -w1 192.168.1.150 55443)
+			RET_VAL=$(echo -ne '{"id":1,"method":"set_bright","params":['$INT',"smooth",'$INT_INC_TIME_MS']}\r\n' | nc -w1 $IP_RPi 55443)
 	                if ( echo "$RET_VAL" | grep -q "bright" )
 	                then 
 	                	let INT=$INT+$INT_STEP
@@ -176,7 +179,7 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
 		# Ramping up bulb
 		while true; do
 			# Await the correct return value: '{"method":"props","params":{"power":"on"}}'
-                        RET_VAL=$(echo -ne '{"id":1,"method":"set_power","params":["on","smooth",80000]}\r\n' | nc -w1 192.168.1.150 55443)
+                        RET_VAL=$(echo -ne '{"id":1,"method":"set_power","params":["on","smooth",80000]}\r\n' | nc -w1 $IP_RPi 55443)
                         echo "RET_VAL=$RET_VAL"
 
 			#if ( echo "$RET_VAL" | grep -q "on" )
@@ -194,7 +197,7 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
 
 		# Set intensity to minimal 1%.
 		while true; do
-			RET_VAL=$(echo -ne '{"id":1,"method":"set_bright","params":['$STARTING_INTENSITY',"sudden",0]}\r\n' | nc -w1 192.168.1.150 55443)
+			RET_VAL=$(echo -ne '{"id":1,"method":"set_bright","params":['$STARTING_INTENSITY',"sudden",0]}\r\n' | nc -w1 $IP_RPi 55443)
 			if ( echo "$RET_VAL" | grep -q "bright" )
                         then 
                                 #echo "Set intensity: $RET_VAL"
@@ -202,7 +205,7 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
                         else
                                 echo "Failed to set intensity:$RET_VAL"
 				# Maybe because the intensity is the same.
-				RET_VAL=$(echo -ne '{"id":1,"method":"get_prop","params":["bright"]}\r\n' | nc -w1 192.168.1.150 55443)
+				RET_VAL=$(echo -ne '{"id":1,"method":"get_prop","params":["bright"]}\r\n' | nc -w1 $IP_RPi 55443)
 				echo "Reading intensity: $RET_VAL"	
 
 				if ( echo "$RET_VAL" | grep -q '"1"')
@@ -225,7 +228,7 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
 		kill $PID_MLL
 
                 #Turn of bulb slowly after at most 15 minutes.
-                echo -ne '{"id":1,"method":"set_power","params":["off","smooth",5000]}\r\n' | nc -w1 192.168.1.150 55443
+                echo -ne '{"id":1,"method":"set_power","params":["off","smooth",5000]}\r\n' | nc -w1 $IP_RPi 55443
 
 		echo "Alarm loop done at: " $(eval "date +\"%T\"") >> ~/Desktop/log.txt
 		sleep 1
