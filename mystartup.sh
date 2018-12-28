@@ -89,7 +89,7 @@ rm ~/Desktop/log.txt
 echo "Starting up Johan Yeelight clock script, /etc/init.d/mystartup.sh" > ~/Desktop/log.txt
 
 # If day not Firday or Saturday skip all settings and set alarm to 05:45.
-if  [ "$(date +%A)" != "fredag" ] && [ "$(date +%A)" != "lördag"  ] && [ "$(date +%H)" -lt "21" ]
+if  [ "$(date +%A)" != "fredag" ] && [ "$(date +%A)" != "lördag"  ] && [ "$(date +%H)" -lt "20" ]
 then
 	Z_ALARM_HOUR="05"
 	Z_ALARM_MIN="45"
@@ -98,7 +98,7 @@ then
 else
 
 	# Set up alarm time
-	Z_ALARM_HOUR=$(zenity --list --radiolist --width=70 --height=100 --text \
+	Z_ALARM_HOUR=$(zenity --list --radiolist --width=70 --height=200 --text \
 		"Select time for alarm (hours):" \
 	        --hide-header --column "Select" --column "Hour" \
 		TRUE "$(date +%H)" \
@@ -129,7 +129,7 @@ else
 
 	if  [ "$Z_ALARM_HOUR" != "" ]
 	then
-		Z_ALARM_MIN=$(zenity --list --radiolist --width=70 --height=100 --text \
+		Z_ALARM_MIN=$(zenity --list --radiolist --width=70 --height=300 --text \
 	        "Select time for alarm (minutes):" \
 	        --hide-header --column "Select" --column "Minutes" \
 		TRUE "$(date +%M)" \
@@ -149,14 +149,14 @@ else
 
 		if [ "$Z_ALARM_MIN" != "" ]
 		then
-			zenity --info --text "Alarm set to $Z_ALARM_HOUR:$Z_ALARM_MIN."
+			zenity --timeout 10 --info --text "Alarm set to $Z_ALARM_HOUR:$Z_ALARM_MIN."
 			W_TIME_START_2=$Z_ALARM_HOUR:$Z_ALARM_MIN
 			echo "Alarm set to: $W_TIME_START_2" >> ~/Desktop/log.txt
 		else 
-			zenity --info --text "Alarm not set. Exiting"
+			zenity --timeout 5 --info --text "Alarm not set. Exiting"
 		fi
 	else 
-		zenity --info --text "Alarm not set. Exiting"
+		zenity --timeout 60 --info --text "Alarm not set. Exiting"
 	fi
 fi #End of weekday -> Alarm time  = 05:45
 
@@ -184,7 +184,7 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
 
 			#if ( echo "$RET_VAL" | grep -q "on" )
 			if ( echo "$RET_VAL" | grep -q '{"method":"props","params":{"power":"on"}}' )
-			then 
+			then
 				echo "Turning on bulb"
 				break
 			else
