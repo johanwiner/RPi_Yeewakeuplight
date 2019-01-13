@@ -86,10 +86,10 @@ rm ~/Desktop/log.txt
 echo "Starting up Johan Yeelight clock script, /etc/init.d/mystartup.sh" > ~/Desktop/log.txt
 
 # Set up bulp's IP address.
-IP_Yeelight_end=$(echo $Yeelight_IP | cut -d'.' -f 4)
+IP_Yeelight_end=$(echo $IP_Yeelight | cut -d'.' -f 4)
 IP_Yeelight_end=$(zenity --scale --text "Select IP of bulp." --value=$IP_Yeelight_end --min-value="0" --max-value="255" --step="1")
 
-IP_Yeelight_beg=$(echo $Yeelight_IP | cut -d'.' -f 1-3)
+IP_Yeelight_beg=$(echo $IP_Yeelight | cut -d'.' -f 1-3)
 IP_Yeelight="$IP_Yeelight_beg.$IP_Yeelight_end"
 
 # Inform user about the Yeelight bulps IP address settings
