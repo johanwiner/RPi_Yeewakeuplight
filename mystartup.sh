@@ -87,13 +87,20 @@ echo "Starting up Johan Yeelight clock script, /etc/init.d/mystartup.sh" > ~/Des
 
 # Set up bulp's IP address.
 IP_Yeelight_end=$(echo $IP_Yeelight | cut -d'.' -f 4)
-IP_Yeelight_end=$(zenity --scale --text "Select IP of bulp." --value=$IP_Yeelight_end --min-value="0" --max-value="255" --step="1")
+IP_Yeelight_end=$(zenity --timeout 30 --scale --text "Select IP of bulp." --value=$IP_Yeelight_end --min-value="0" --max-value="255" --step="1")
 
-IP_Yeelight_beg=$(echo $IP_Yeelight | cut -d'.' -f 1-3)
-IP_Yeelight="$IP_Yeelight_beg.$IP_Yeelight_end"
+if [ "$IP_Yeelight_end" != "" ]
+then
+	IP_Yeelight_beg=$(echo $IP_Yeelight | cut -d'.' -f 1-3)
+	IP_Yeelight="$IP_Yeelight_beg.$IP_Yeelight_end"
+	
+	# Inform user about the Yeelight bulps IP address settings
+	zenity --timeout 20 --info --text "Bulp IP set to $IP_Yeelight"
+else 
+	zenity --timeout 5 --info --text "Alarm not set. Exiting"
+	exit 0
+fi
 
-# Inform user about the Yeelight bulps IP address settings
-zenity --timeout 20 --info --text "Bulp IP set to $IP_Yeelight"
 
 # If day not Firday or Saturday skip all settings and set alarm to 05:45.
 if  [ "$(date +%A)" != "fredag" ] && [ "$(date +%A)" != "lördag"  ] && [ "$(date +%H)" -lt "20" ]
