@@ -40,10 +40,19 @@ INT_INC_TIME_S=70
 IP_Yeelight=192.168.1.150
 
 ##---------------------------------
+# 	Debug function
+#	Prints a debug message to terminal and log.txt
+##---------------------------------
+debug_echo() {
+	echo "$1" >> ~/Desktop/log.txt
+	echo "$1"
+}
+
+##---------------------------------
 # 	Main light loop function
 ##---------------------------------
 main_light_loop() {
-	echo "Loop lap 0"
+
 	RGB_COUNTER=0
 	let INT_STEP=80/$RGB_STEPS
 	let INT=$STARTING_INTENSITY+$INT_STEP
@@ -55,23 +64,30 @@ main_light_loop() {
 		let COLOR=$COLOR_R*65536+$COLOR_G*256+$COLOR_B
 
 		RET_VAL=$(echo -ne '{"id":1,"method":"set_rgb","params":['$COLOR',"smooth",'$COLOR_CHANGE_TIME_MS']}\r\n' | nc -w1 $IP_Yeelight 55443)
-		echo "Loop lap: $RGB_COUNTER"
+
+		debug_echo "Loop lap $RGB_COUNTER"
+
 		sleep $COLOR_CHANGE_TIME_S
               	let RGB_COUNTER=RGB_COUNTER+1
 
 		# Increase intensity also, do this stepwise.
                 while true; do
 			RET_VAL=$(echo -ne '{"id":1,"method":"set_bright","params":['$INT',"smooth",'$INT_INC_TIME_MS']}\r\n' | nc -w1 $IP_Yeelight 55443)
+
 	                if ( echo "$RET_VAL" | grep -q "bright" )
 	                then 
-	                	let INT=$INT+$INT_STEP
+				debug_echo "Succeded setting intensity: $RET_VAL, $(date)"
+				let INT=$INT+$INT_STEP
 	                        break
 	                else
-	                	echo "Failed to set intensity:$RET_VAL"
+	                	debug_echo "Failed to set intensity:$RET_VAL"
+				# Try again after some time.
+				sleep 2;
 	               	fi
-	               	sleep $INT_INC_TIME_S
 	     	done
-             	sleep 2
+
+		# New intensity has been set. Sleep for some time.
+		sleep $INT_INC_TIME_S
 	done
 }
 
@@ -83,7 +99,7 @@ main_light_loop() {
 # Remove previous log file
 rm ~/Desktop/log.txt
 
-echo "Starting up Johan Yeelight clock script, /etc/init.d/mystartup.sh" > ~/Desktop/log.txt
+log_echo "$(date): Starting up Johan Yeelight clock script, /etc/init.d/mystartup.sh"
 
 # Set up bulp's IP address.
 IP_Yeelight_end=$(echo $IP_Yeelight | cut -d'.' -f 4)
@@ -103,12 +119,12 @@ fi
 
 
 # If day not Firday or Saturday skip all settings and set alarm to 05:45.
-if  [ "$(date +%A)" != "fredag" ] && [ "$(date +%A)" != "lördag"  ] && [ "$(date +%H)" -lt "20" ]
+if  [ false && "$(date +%A)" != "fredag" ] && [ "$(date +%A)" != "lördag"  ] && [ "$(date +%H)" -lt "21" ]
 then
 	Z_ALARM_HOUR="05"
 	Z_ALARM_MIN="45"
-        echo "Alarm set to: $Z_ALARM_HOUR:$Z_ALARM_MIN" >> ~/Desktop/log.txt
-        zenity  --timeout 60 --info --text "Alarm automatically set to $Z_ALARM_HOUR:$Z_ALARM_MIN since time now is before 20:00."
+        debug_echo "Alarm set to: $Z_ALARM_HOUR:$Z_ALARM_MIN"
+        zenity  --timeout 60 --info --text "Alarm automatically set to $Z_ALARM_HOUR:$Z_ALARM_MIN since time now is before 21:00."
 else
 
 	# Set up alarm time
@@ -164,11 +180,13 @@ else
 		if [ "$Z_ALARM_MIN" != "" ]
 		then
 			zenity --timeout 10 --info --text "Alarm set to $Z_ALARM_HOUR:$Z_ALARM_MIN."
-			echo "Alarm set to: $Z_ALARM_HOUR:$Z_ALARM_MIN" >> ~/Desktop/log.txt
+			debug_echo "Alarm set to: $Z_ALARM_HOUR:$Z_ALARM_MIN"
 		else 
 			zenity --timeout 5 --info --text "Alarm not set. Exiting"
+			debug_echo "Alarm not set, exiting"
 		fi
 	else 
+		debug_echo "Alarm not set, exiting"
 		zenity --timeout 60 --info --text "Alarm not set. Exiting"
 	fi
 fi
@@ -178,28 +196,28 @@ fi
 ##---------------------------------
 while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
 
-	DATE=$(eval "date +\"%T\"")
-	echo "Timestamp: " $DATE
+	# Logmessage to terminal only
+	echo "Timestamp: $(date)"
 
 	#Start alarm
 	if [ $(date +%H) = $Z_ALARM_HOUR ] && [ $(date +%M) = $Z_ALARM_MIN ]
 	then
-		echo "Alarm got off at: " $(eval "date +\"%T\"") >> ~/Desktop/log.txt
-		echo "Alarm is triggered: " $(eval "date +\"%T\"")
+		tmp_time = $(eval "date +\"%T\"")
+		debug_echo "Alarm got off at: $tmp_time"
 
 		# Ramping up bulb
 		while true; do
 			# Await the correct return value: '{"method":"props","params":{"power":"on"}}'
                         RET_VAL=$(echo -ne '{"id":1,"method":"set_power","params":["on","smooth",80000]}\r\n' | nc -w1 $IP_Yeelight 55443)
-                        echo "RET_VAL=$RET_VAL"
+                        debug_echo "RET_VAL=$RET_VAL"
 
 			#if ( echo "$RET_VAL" | grep -q "on" )
 			if ( echo "$RET_VAL" | grep -q '{"method":"props","params":{"power":"on"}}' )
 			then
-				echo "Turning on bulb"
+				debug_echo "Turning on bulb"
 				break
 			else
-				echo "Failed turning on bulb, RET_VAL=$RET_VAL"
+				debug_echo "Failed turning on bulb, RET_VAL=$RET_VAL"
 			fi
 
 			# Wait before trying to turn on bulb again.
@@ -211,17 +229,17 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
 			RET_VAL=$(echo -ne '{"id":1,"method":"set_bright","params":['$STARTING_INTENSITY',"sudden",0]}\r\n' | nc -w1 $IP_Yeelight 55443)
 			if ( echo "$RET_VAL" | grep -q "bright" )
                         then 
-                                #echo "Set intensity: $RET_VAL"
+                                debug_echo "Set intensity: $RET_VAL"
                                 break
                         else
-                                echo "Failed to set intensity:$RET_VAL"
+                                debug_echo "Failed to set intensity:$RET_VAL"
 				# Maybe because the intensity is the same.
 				RET_VAL=$(echo -ne '{"id":1,"method":"get_prop","params":["bright"]}\r\n' | nc -w1 $IP_Yeelight 55443)
-				echo "Reading intensity: $RET_VAL"	
+				debug_echo "Reading intensity: $RET_VAL"
 
 				if ( echo "$RET_VAL" | grep -q '"1"')
 				then
-					echo "Intensity already set to " $STARTING_INTENSITY
+					debug_echo "Intensity already set to " $STARTING_INTENSITY
 					break
 				fi
                         fi
@@ -234,24 +252,26 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
 
                 zenity --timeout 900 --info --width 200 --height 200 --text "Alarm sounding for 15 minutes. Press ok to stop."
 
-		echo "Killing $PID_MLL"
-		echo "Killing $PID_MLL" >> ~/Desktop/log.txt
+		debug_echo "Killing $PID_MLL"
+
 		kill $PID_MLL
 
                 #Turn of bulb slowly after at most 15 minutes.
                 echo -ne '{"id":1,"method":"set_power","params":["off","smooth",5000]}\r\n' | nc -w1 $IP_Yeelight 55443
 
-		echo "Alarm loop done at: " $(eval "date +\"%T\"") >> ~/Desktop/log.txt
+		tmp_time = $(eval "date +\"%T\"")
+		debug_echo "Alarm loop done at: $tmp_time"
 		sleep 1
 		exit 0
 	else 
+		# Print only to terminal
 		echo "Alarm not going off yet"
 	fi
 
 	sleep 20
 done
 
-echo "Alarm loop failed at: " $(eval "date +\"%T\"") >> ~/Desktop/log.txt
-
+tmp_time = $(eval "date +\"%T\"")
+ebug_echo "Alarm loop failed at: $tmp_time"
 
 
