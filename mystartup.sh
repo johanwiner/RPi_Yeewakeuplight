@@ -44,8 +44,8 @@ IP_Yeelight=192.168.1.150
 #	Prints a debug message to terminal and log.txt
 ##---------------------------------
 debug_echo() {
-	echo "$1" >> ~/Desktop/log.txt
-	echo "$1"
+	echo "[$(date)]: $1" >> ~/Desktop/log.txt
+	echo "[$(date)]: $1"
 }
 
 ##---------------------------------
@@ -57,7 +57,7 @@ main_light_loop() {
 	let INT_STEP=80/$RGB_STEPS
 	let INT=$STARTING_INTENSITY+$INT_STEP
 
-         while [ $RGB_COUNTER -lt $RGB_STEPS ]; do
+        while [ $RGB_COUNTER -lt $RGB_STEPS ]; do
 		let COLOR_R=${RGB_START[0]}+${RGB_STEP[0]}*RGB_COUNTER
 		let COLOR_G=${RGB_START[1]}+${RGB_STEP[1]}*RGB_COUNTER
 		let COLOR_B=${RGB_START[2]}+${RGB_STEP[2]}*RGB_COUNTER
@@ -76,7 +76,7 @@ main_light_loop() {
 
 	                if ( echo "$RET_VAL" | grep -q "bright" )
 	                then 
-				debug_echo "Succeded setting intensity: $RET_VAL, $(date)"
+				debug_echo "Succeded setting intensity: $RET_VAL"
 				let INT=$INT+$INT_STEP
 	                        break
 	                else
@@ -196,14 +196,13 @@ fi
 ##---------------------------------
 while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
 
-	# Logmessage to terminal only
+	# Log message to terminal only
 	echo "Timestamp: $(date)"
 
 	#Start alarm
 	if [ $(date +%H) = $Z_ALARM_HOUR ] && [ $(date +%M) = $Z_ALARM_MIN ]
 	then
-		tmp_time = $(eval "date +\"%T\"")
-		debug_echo "Alarm got off at: $tmp_time"
+		debug_echo "Alarm got off"
 
 		# Ramping up bulb
 		while true; do
@@ -259,8 +258,7 @@ while [[ "$Z_ALARM_HOUR" != ""  && "$Z_ALARM_MIN" != "" ]]; do
                 #Turn of bulb slowly after at most 15 minutes.
                 echo -ne '{"id":1,"method":"set_power","params":["off","smooth",5000]}\r\n' | nc -w1 $IP_Yeelight 55443
 
-		tmp_time = $(eval "date +\"%T\"")
-		debug_echo "Alarm loop done at: $tmp_time"
+		debug_echo "Alarm loop done"
 		sleep 1
 		exit 0
 	else 
