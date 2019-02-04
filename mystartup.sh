@@ -119,7 +119,7 @@ fi
 
 
 # If day not Firday or Saturday skip all settings and set alarm to 05:45.
-if  [ false && "$(date +%A)" != "fredag" ] && [ "$(date +%A)" != "lördag"  ] && [ "$(date +%H)" -lt "21" ]
+if  [ "$(date +%A)" != "fredag" ] && [ "$(date +%A)" != "lördag"  ] && [ "$(date +%H)" -lt "21" ]
 then
 	Z_ALARM_HOUR="05"
 	Z_ALARM_MIN="45"
