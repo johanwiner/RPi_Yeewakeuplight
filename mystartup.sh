@@ -99,7 +99,7 @@ main_light_loop() {
 # Remove previous log file
 rm ~/Desktop/log.txt
 
-log_echo "$(date): Starting up Johan Yeelight clock script, /etc/init.d/mystartup.sh"
+debug_echo "Starting up Johan Yeelight clock script, /etc/init.d/mystartup.sh"
 
 # Set up bulp's IP address.
 IP_Yeelight_end=$(echo $IP_Yeelight | cut -d'.' -f 4)
